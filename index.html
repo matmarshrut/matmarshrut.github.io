@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Математическая игра для 1–4 классов: периметр и площадь в путешествии к Байкалу">
+<title>Поезд к Байкалу</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Russo+One&family=Nunito:wght@400;600;800&family=PT+Mono&display=swap">
+<style>
+/* Layout: one column "railway ticket" card under a route timetable strip; single bright daytime look */
+:root{
+  --sky:#E4EFF4;      /* page ground, lake-air blue */
+  --paper:#FFFFFF;    /* ticket / card */
+  --ink:#16324A;      /* text, outlines */
+  --ink-2:#4E6A7F;    /* secondary text */
+  --line:#C6D9E3;     /* rules, empty cells */
+  --signal:#D9512A;   /* railway signal: accent, CTA */
+  --birch:#2C8657;    /* correct */
+  --amber:#F0AE2C;    /* stars, rewards */
+  --water:#3E8FC4;    /* Baikal */
+  --ginger:#B06C36;   /* gingerbread */
+  --hint:#FFF4DA;
+  --f-display:"Russo One", "Arial Black", system-ui, sans-serif;
+  --f-body:"Nunito", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"PT Mono", ui-monospace, "Courier New", monospace;
+  color-scheme: light;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+body{background:var(--sky);color:var(--ink);font-family:var(--f-body);font-size:18px;line-height:1.45;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:20px 40px}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--f-display);font-weight:400;text-wrap:balance;margin:0;letter-spacing:.01em}
+h1{font-size:clamp(30px,6vw,44px);line-height:1.1}
+h2{font-size:clamp(22px,4.5vw,28px);line-height:1.15}
+h3{font-size:19px}
+p{margin:0}
+.muted{color:var(--ink-2)}
+.eyebrow{font-family:var(--f-mono);font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-2)}
+
+/* route strip */
+.route{display:flex;align-items:center;gap:0;overflow-x:auto;padding:4px 2px}
+.stop{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;flex:1;position:relative}
+.stop::before{content:"";position:absolute;top:10px;left:-50%;width:100%;height:3px;background:var(--line);z-index:0}
+.stop:first-child::before{display:none}
+.stop.done::before,.stop.now::before{background:var(--ink)}
+.dot{width:22px;height:22px;border-radius:50%;border:3px solid var(--line);background:var(--paper);z-index:1;display:grid;place-items:center;font-size:12px;color:var(--paper);font-weight:800}
+.stop.done .dot{background:var(--birch);border-color:var(--birch)}
+.stop.now .dot{border-color:var(--signal);background:var(--paper);box-shadow:0 0 0 4px rgba(217,81,42,.18)}
+.stop span{font-size:13px;font-weight:700;color:var(--ink-2)}
+.stop.now span{color:var(--ink)}
+
+/* ticket card */
+.ticket{background:var(--paper);border-radius:18px;padding:24px;display:flex;flex-direction:column;gap:18px;position:relative;
+  box-shadow:0 2px 0 var(--line),0 12px 30px -18px rgba(22,50,74,.35)}
+.ticket-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;
+  padding-bottom:14px;border-bottom:2px dashed var(--line)}
+.stub{font-family:var(--f-mono);font-size:13px;color:var(--ink-2);text-align:right;line-height:1.5}
+.stub b{color:var(--ink);font-size:15px}
+
+/* buttons */
+.btn{font:800 18px/1 var(--f-body);border:0;border-radius:14px;padding:16px 24px;min-height:54px;cursor:pointer;
+  background:var(--signal);color:#fff;box-shadow:0 4px 0 #9E3618;transition:transform .08s}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #9E3618}
+.btn:disabled{background:var(--line);color:var(--ink-2);box-shadow:none;cursor:not-allowed}
+.btn.ghost{background:var(--paper);color:var(--ink);box-shadow:0 0 0 2px var(--line) inset}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+:focus-visible{outline:3px solid var(--water);outline-offset:3px}
+
+/* form */
+.form{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field.full{grid-column:1/-1}
+.field label{font-weight:700;font-size:15px}
+.field input,.field select{font:600 18px var(--f-body);color:var(--ink);background:var(--paper);border:2px solid var(--line);border-radius:12px;padding:12px 14px;min-height:50px;width:100%}
+.field input:focus,.field select:focus{border-color:var(--water);outline:none}
+.note{font-size:14px;color:var(--ink-2)}
+@media (max-width:520px){.form{grid-template-columns:1fr}}
+
+/* wagons */
+.wagons{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media (max-width:620px){.wagons{grid-template-columns:1fr 1fr}}
+.wagon{font-family:var(--f-body);border:0;cursor:pointer;background:var(--paper);border-radius:14px 14px 8px 8px;padding:14px 10px 26px;position:relative;
+  box-shadow:0 0 0 2px var(--line) inset;color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.wagon .num{font-family:var(--f-mono);font-size:12px;letter-spacing:.1em;color:var(--ink-2)}
+.wagon .cls{font-family:var(--f-display);font-size:20px}
+.wagon .win{display:flex;gap:5px}
+.wagon .win i{width:16px;height:12px;border-radius:3px;background:var(--sky);box-shadow:0 0 0 2px var(--line) inset}
+.wagon::after{content:"";position:absolute;bottom:-8px;left:18%;right:18%;height:16px;
+  background:radial-gradient(circle at 8px 8px,var(--ink) 7px,transparent 8px) left/16px 16px no-repeat,radial-gradient(circle at 8px 8px,var(--ink) 7px,transparent 8px) right/16px 16px no-repeat}
+.wagon.open{box-shadow:0 0 0 3px var(--signal) inset}
+.wagon.open .win i{background:var(--amber);box-shadow:none}
+.wagon[disabled]{cursor:not-allowed;opacity:.55}
+.wagon .tag{font-size:13px;font-weight:700;color:var(--ink-2)}
+.wagon.open .tag{color:var(--signal)}
+
+/* travel */
+.rail{width:100%;height:auto;display:block;overflow:visible}
+.train{animation:ride 2.6s cubic-bezier(.3,.1,.25,1) both}
+@keyframes ride{from{transform:translateX(-330px)}to{transform:translateX(0)}}
+.smoke{animation:puff 1.2s ease-out infinite}
+@keyframes puff{0%{opacity:.7;transform:translate(0,0) scale(.6)}100%{opacity:0;transform:translate(-18px,-16px) scale(1.4)}}
+.fact{background:var(--sky);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.fact ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+
+/* tasks */
+.figure{display:flex;justify-content:center}
+.figure svg{width:100%;max-width:440px;height:auto}
+.choices{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.choices.pics{grid-template-columns:repeat(3,1fr)}
+@media (max-width:620px){.choices.pics{grid-template-columns:1fr}.choice.pic{flex-direction:row;justify-content:space-between;padding:10px 16px}.choice.pic svg{width:72%}}
+@media (max-width:420px){.choice{font-size:16px;padding:0 4px}.stop span{font-size:11px}.ticket{padding:18px}}
+.choice{font:800 22px var(--f-body);font-variant-numeric:tabular-nums;color:var(--ink);background:var(--paper);border:0;border-radius:14px;min-height:64px;cursor:pointer;
+  box-shadow:0 0 0 2px var(--line) inset,0 4px 0 var(--line);transition:transform .08s}
+.choice:hover{box-shadow:0 0 0 2px var(--water) inset,0 4px 0 var(--line)}
+.choice:active{transform:translateY(3px)}
+.choice.ok{background:var(--birch);color:#fff;box-shadow:0 4px 0 #1C5E3C}
+.choice.bad{background:var(--signal);color:#fff;box-shadow:none;animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.choice svg{width:100%;height:auto;display:block}
+.choice.pic{padding:10px;font-size:16px;display:flex;flex-direction:column;gap:6px;align-items:center}
+
+.hint{background:var(--hint);border-radius:14px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start}
+.hint .ico{font-family:var(--f-display);background:var(--amber);color:var(--ink);width:30px;height:30px;border-radius:50%;display:grid;place-items:center;flex:none}
+.good{background:#E3F3EA;border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.good h3{color:var(--birch)}
+
+/* cell grids */
+.grid{display:grid;gap:4px;justify-content:center}
+.cell{width:clamp(44px,12vw,62px);aspect-ratio:1;max-width:100%;border:0;border-radius:8px;background:var(--paper);box-shadow:0 0 0 2px var(--line) inset;cursor:pointer;padding:0;display:grid;place-items:center}
+.cell.on{background:var(--ink);box-shadow:none;cursor:default}
+.cell.tile{background:#5B4632}
+.cell.tile svg{width:70%;height:70%}
+.cell.given{background:#C9B48A;box-shadow:none;cursor:default}
+.cell.water{background:var(--water);box-shadow:none;cursor:default}
+.gridrow{display:flex;align-items:center;gap:8px;justify-content:center}
+.rowlbl{font-family:var(--f-mono);font-size:12px;color:var(--ink-2);width:46px;text-align:right}
+
+/* match */
+.match{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.shape{background:var(--paper);border:0;border-radius:14px;padding:10px;cursor:pointer;box-shadow:0 0 0 2px var(--line) inset;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--ink);font:700 15px var(--f-body);min-width:0}
+.shape svg{width:100%;max-width:150px;height:auto}
+.shape.sel{box-shadow:0 0 0 3px var(--signal) inset}
+.shape.wrong{box-shadow:0 0 0 3px var(--signal) inset;animation:shake .35s}
+.shape.right{box-shadow:0 0 0 3px var(--birch) inset}
+.slot{font:800 20px var(--f-body);min-height:34px;min-width:80px;border-radius:10px;border:2px dashed var(--line);display:grid;place-items:center;font-variant-numeric:tabular-nums}
+.slot.filled{border:2px solid var(--ink);background:var(--sky)}
+.chips{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.chip{font:800 22px var(--f-body);font-variant-numeric:tabular-nums;border:0;border-radius:999px;padding:12px 22px;min-height:54px;cursor:pointer;background:var(--ink);color:#fff}
+.chip.used{background:var(--line);color:var(--ink-2)}
+@media (max-width:520px){.match{grid-template-columns:1fr}.shape{display:grid;grid-template-columns:96px minmax(0,1fr);grid-template-rows:auto auto;column-gap:12px;row-gap:6px;align-items:center;justify-items:start;font-size:16px;text-align:left}.shape > span:first-child{grid-row:1 / 3;width:96px!important}.shape svg{max-width:96px}.shape .slot{min-width:72px}}
+
+/* map */
+.mapbox{background:var(--sky);border-radius:14px;padding:8px}
+.mapbox svg{width:100%;height:auto;display:block}
+.pieces{font-family:var(--f-mono);font-size:14px;color:var(--ink-2)}
+
+/* certificate */
+.cert{border:3px double var(--ink);border-radius:12px;padding:22px;text-align:center;display:flex;flex-direction:column;gap:10px;background:var(--paper)}
+.cert .name{font-family:var(--f-display);font-size:clamp(24px,5vw,32px)}
+.stars{color:var(--amber);font-size:28px;letter-spacing:6px}
+
+@media (prefers-reduced-motion: reduce){.train,.smoke,.choice.bad,.shape.wrong{animation:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap" id="app" aria-live="polite"></div>
+
+<script>
+(function(){
+const app = document.getElementById('app');
+
+/* ---------- data ---------- */
+const STOPS = [
+  { city:'Казань', place:'Казанский кремль',
+    facts:['Казанский кремль стоит в центре Казани, на берегу реки Казанки.',
+           'В нём рядом стоят памятники татарской и русской культуры.',
+           'С 2000 года кремль входит в список всемирного наследия ЮНЕСКО.'] },
+  { city:'Донецк', place:'Парк кованых фигур',
+    facts:['Парк кованых фигур заложили в центре Донецка в 2001 году.',
+           'Фигуры для него выковали кузнецы на фестивалях кузнечного мастерства.'] },
+  { city:'Тула', place:'Тульский пряник',
+    facts:['Тульские пряники пекут уже больше трёхсот лет.',
+           'В центре Тулы стоит бронзовый памятник тульскому прянику.'] },
+  { city:'Москва', place:'Красная площадь',
+    facts:['Красная площадь находится в центре Москвы, рядом с Кремлём.',
+           'На ней стоят собор Василия Блаженного и Исторический музей.'] },
+  { city:'Байкал', place:'Озеро Байкал',
+    facts:['Байкал — самое глубокое озеро в мире.',
+           'В него впадает множество рек, а вытекает только одна — Ангара.'] }
+];
+
+const state = { screen:'start', player:null, stop:0, pieces:0, hints:0 };
+
+/* ---------- helpers ---------- */
+function h(tag, a, ...kids){
+  const el = document.createElement(tag);
+  if (a) for (const k in a){
+    const v = a[k];
+    if (k === 'class') el.className = v;
+    else if (k === 'html') el.innerHTML = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat()){
+    if (c == null || c === false) continue;
+    el.append(c.nodeType ? c : document.createTextNode(c));
+  }
+  return el;
+}
+const shuffle = arr => { const a = arr.slice(); for (let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
+function go(screen){ state.screen = screen; render(); window.scrollTo({top:0, behavior:'smooth'}); }
+
+function routeStrip(){
+  return h('nav',{class:'route','aria-label':'Маршрут'},
+    STOPS.map((s,i)=>{
+      const cls = i < state.pieces ? 'done' : (i === state.stop && state.screen!=='final' ? 'now' : '');
+      return h('div',{class:'stop '+cls}, h('div',{class:'dot'}, i < state.pieces ? '✓' : ''), h('span',null,s.city));
+    }));
+}
+function ticket(eyebrow, title, stub, ...body){
+  return h('section',{class:'ticket'},
+    h('div',{class:'ticket-head'},
+      h('div',{style:'display:flex;flex-direction:column;gap:6px;min-width:0'}, h('div',{class:'eyebrow'},eyebrow), h('h2',null,title)),
+      stub ? h('div',{class:'stub',html:stub}) : null),
+    ...body);
+}
+function stubFor(i){ return `Вагон <b>1</b><br>Станция <b>${i+1}</b> из 5`; }
+
+/* ---------- map ---------- */
+const MAP_PTS = { 'Донецк':[78,206], 'Тула':[150,136], 'Москва':[170,92], 'Казань':[282,118], 'Байкал':[516,176] };
+function mapSVG(n){
+  const P = MAP_PTS;
+  const route = ['Казань','Донецк','Тула','Москва','Байкал'];
+  let d = 'M'+P[route[0]].join(',');
+  for (let i=1;i<route.length;i++){
+    const [x0,y0]=P[route[i-1]], [x1,y1]=P[route[i]];
+    d += ` Q${(x0+x1)/2},${Math.min(y0,y1)-34} ${x1},${y1}`;
+  }
+  const stations = route.map(c=>{
+    const [x,y]=P[c];
+    return `<circle cx="${x}" cy="${y}" r="9" fill="#fff" stroke="#16324A" stroke-width="4"/>
+            <text x="${x}" y="${y+30}" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="800" font-size="16" fill="#16324A">${c}</text>`;
+  }).join('');
+  let covers = '';
+  for (let i=0;i<5;i++){
+    if (i < n) continue;
+    covers += `<rect x="${i*120+3}" y="3" width="114" height="274" rx="10" fill="#fff" stroke="#C6D9E3" stroke-width="3" stroke-dasharray="8 7"/>
+               <text x="${i*120+60}" y="152" text-anchor="middle" font-family="Russo One, sans-serif" font-size="38" fill="#C6D9E3">${i+1}</text>`;
+  }
+  return `<svg viewBox="0 0 600 280" role="img" aria-label="Карта путешествия: собрано фрагментов ${n} из 5">
+    <rect width="600" height="280" fill="#E4EFF4"/>
+    <path d="M30,190 C40,120 110,70 190,58 C260,45 330,70 400,62 C470,54 540,80 575,120 C590,160 560,215 500,228 C420,248 330,222 260,236 C190,252 90,258 50,236 C30,224 26,208 30,190Z" fill="#D6E9D7" stroke="#A9CBB0" stroke-width="3"/>
+    <ellipse cx="522" cy="196" rx="12" ry="30" transform="rotate(35 522 196)" fill="#3E8FC4"/>
+    <path d="${d}" fill="none" stroke="#16324A" stroke-width="7" stroke-linecap="round"/>
+    <path d="${d}" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="10 10" stroke-linecap="round"/>
+    ${stations}
+    <text x="20" y="34" font-family="PT Mono, monospace" font-size="14" fill="#4E6A7F" letter-spacing="2">КАРТА ПУТЕШЕСТВИЯ</text>
+    ${covers}
+  </svg>`;
+}
+
+/* ---------- screens ---------- */
+function screenStart(){
+  const f = (id,label,opts={}) => h('div',{class:'field'+(opts.full?' full':'')},
+    h('label',{for:id},label, opts.req ? h('span',{style:'color:var(--signal)'},' *') : null),
+    opts.select ? h('select',{id,required:opts.req}, h('option',{value:''},'Выбери класс'),
+        Array.from({length:11},(_,i)=>h('option',{value:i+1},(i+1)+' класс')))
+      : h('input',{id,type:'text',autocomplete:'off',required:opts.req, maxlength:60}));
+  const form = h('form',{class:'form',onsubmit:e=>{
+      e.preventDefault();
+      const v = id => document.getElementById(id).value.trim();
+      state.player = { last:v('f-last'), first:v('f-first'), cls:+v('f-class'), school:v('f-school'), city:v('f-city'), region:v('f-region') };
+      go('wagons');
+    }},
+    f('f-last','Фамилия'), f('f-first','Имя',{req:true}),
+    f('f-class','Класс',{req:true,select:true}), f('f-school','Школа'),
+    f('f-city','Город'), f('f-region','Регион'),
+    h('p',{class:'note full',style:'grid-column:1/-1'},'Имя и класс нужны для грамоты в конце игры. Данные никуда не отправляются и исчезнут, когда закроешь страницу.'),
+    h('div',{class:'row',style:'grid-column:1/-1'}, h('button',{class:'btn',type:'submit'},'Купить билет')));
+  return [
+    h('header',{style:'display:flex;flex-direction:column;gap:10px;padding-top:6px'},
+      h('div',{class:'eyebrow'},'Математическая экспедиция'),
+      h('h1',null,'Поезд к Байкалу'),
+      h('p',{style:'max-width:60ch'},'Алиса и Егор с рюкзаками отправляются в путешествие по России. В каждом городе их ждёт задача. Реши её — и получишь кусочек карты. Собери все пять и доберись до Байкала!')),
+    trainBanner(),
+    ticket('Билет пассажира','Заполни билет', null, form)
+  ];
+}
+function trainBanner(){
+  return h('div',{html:`<svg class="rail" viewBox="0 0 600 70" aria-hidden="true">
+    <line x1="0" y1="62" x2="600" y2="62" stroke="#16324A" stroke-width="3"/>
+    ${Array.from({length:30},(_,i)=>`<rect x="${i*20+4}" y="62" width="10" height="5" fill="#4E6A7F"/>`).join('')}
+    <g transform="translate(150 0)">${trainShape()}</g></svg>`});
+}
+function trainShape(){
+  const wagon = (x,c)=>`<rect x="${x}" y="22" width="92" height="34" rx="6" fill="${c}"/>
+    <rect x="${x+10}" y="29" width="16" height="12" rx="2" fill="#FFF4DA"/><rect x="${x+38}" y="29" width="16" height="12" rx="2" fill="#FFF4DA"/><rect x="${x+66}" y="29" width="16" height="12" rx="2" fill="#FFF4DA"/>
+    <circle cx="${x+20}" cy="58" r="6" fill="#16324A"/><circle cx="${x+72}" cy="58" r="6" fill="#16324A"/>`;
+  return `${wagon(0,'#2C8657')}${wagon(98,'#3E8FC4')}
+    <rect x="196" y="14" width="96" height="42" rx="8" fill="#D9512A"/>
+    <rect x="252" y="20" width="24" height="16" rx="3" fill="#FFF4DA"/>
+    <rect x="206" y="4" width="14" height="14" fill="#16324A"/>
+    <circle class="smoke" cx="212" cy="0" r="7" fill="#C6D9E3" style="transform-box:fill-box;transform-origin:center"/>
+    <circle cx="216" cy="58" r="7" fill="#16324A"/><circle cx="270" cy="58" r="7" fill="#16324A"/>
+    <rect x="292" y="44" width="10" height="10" fill="#16324A"/>`;
+}
+
+function screenWagons(){
+  const p = state.player;
+  const list = [['1–4',[1,4]],['5–6',[5,6]],['7–9',[7,9]],['10–11',[10,11]]];
+  const mine = list.findIndex(([,r])=>p.cls>=r[0]&&p.cls<=r[1]);
+  return [
+    ticket('Посадка','Выбери свой вагон', `Пассажир<br><b>${escapeHTML(p.first)}</b><br>${p.cls} класс`,
+      h('p',null,'В поезде четыре вагона — по одному для каждого возраста. Сейчас открыт вагон для 1–4 классов.'),
+      h('div',{class:'wagons'}, list.map(([lbl],i)=>h('button',{class:'wagon'+(i===0?' open':''),disabled:i!==0,
+          onclick:()=>{ state.stop=0; state.pieces=0; state.hints=0; go('travel'); }},
+        h('span',{class:'num'},'ВАГОН '+(i+1)), h('span',{class:'cls'},lbl), h('span',{class:'win'},h('i'),h('i'),h('i')),
+        h('span',{class:'tag'}, i===0 ? (mine===0?'Твой вагон':'Открыт') : 'Скоро')))),
+      mine > 0 ? h('p',{class:'note'},'Твой вагон ещё готовится в депо. Можешь прокатиться в первом вагоне — он открыт для всех.') : null)
+  ];
+}
+function escapeHTML(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function screenTravel(){
+  const s = STOPS[state.stop], i = state.stop;
+  const from = i===0 ? 'Отправление' : STOPS[i-1].city + ' → ' + s.city;
+  const rail = h('div',{html:`<svg class="rail" viewBox="0 0 600 96" aria-hidden="true">
+      <line x1="0" y1="86" x2="600" y2="86" stroke="#16324A" stroke-width="3"/>
+      ${Array.from({length:30},(_,k)=>`<rect x="${k*20+4}" y="86" width="10" height="6" fill="#4E6A7F"/>`).join('')}
+      <rect x="520" y="10" width="76" height="30" rx="5" fill="#16324A"/>
+      <text x="558" y="31" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="800" font-size="15" fill="#fff">${s.city}</text>
+      <line x1="558" y1="40" x2="558" y2="86" stroke="#16324A" stroke-width="4"/>
+      <g class="train"><g transform="translate(200 24)">${trainShape()}</g></g></svg>`});
+  return [
+    routeStrip(),
+    ticket(from, i===0 ? 'Поезд стоит в Казани' : 'Поезд прибыл: ' + s.city, stubFor(i),
+      rail,
+      h('div',{class:'fact'}, h('div',{class:'eyebrow'},'Справка · '+s.place),
+        h('ul',null, s.facts.map(t=>h('li',null,t)))),
+      h('div',{class:'row'}, h('button',{class:'btn',onclick:()=>go('task')},'Выйти на станцию')))
+  ];
+}
+
+/* ---------- task frame ---------- */
+function screenTask(){
+  const i = state.stop;
+  const body = h('div',{style:'display:flex;flex-direction:column;gap:18px'});
+  const fb = h('div',{style:'display:flex;flex-direction:column;gap:12px'});
+  let hinted = false;
+  const api = {
+    hint(text){ if(!hinted){ state.hints++; hinted=true; }
+      fb.replaceChildren(h('div',{class:'hint',role:'status'}, h('span',{class:'ico','aria-hidden':'true'},'?'),
+        h('div',null, h('b',null,'Попробуй ещё раз. '), text))); },
+    clear(){ fb.replaceChildren(); },
+    solved(text){
+      fb.replaceChildren(h('div',{class:'good',role:'status'},
+        h('h3',null,'Верно!'), h('p',null,text),
+        h('div',{class:'row'}, h('button',{class:'btn',onclick:()=>{ state.pieces = i+1; go('reward'); }},'Забрать кусочек карты'))));
+      fb.querySelector('button').focus({preventScroll:true});
+      fb.scrollIntoView({behavior:'smooth',block:'nearest'});
+    },
+    reset(){ hinted = false; }
+  };
+  const t = TASKS[i](api);
+  body.append(...t.nodes);
+  return [ routeStrip(), ticket('Задание '+(i+1)+' · '+STOPS[i].city, t.title, stubFor(i), body, fb) ];
+}
+
+/* choice group: wrong answer → hint, options reshuffle, child answers again */
+function choiceGroup(api, options, correct, hints, fallback, onRight, opts={}){
+  const wrap = h('div',{class:'choices'+(opts.pic?' pics':'')});
+  const label = opts.label || (v=>String(v));
+  function draw(){
+    wrap.replaceChildren(...shuffle(options).map(v=>h('button',{class:'choice'+(opts.pic?' pic':''),type:'button',onclick:e=>pick(v,e.currentTarget),html:label(v)})));
+  }
+  function pick(v,btn){
+    if (v === correct){
+      btn.classList.add('ok'); [...wrap.children].forEach(b=>b.disabled=true); onRight();
+    } else {
+      btn.classList.add('bad'); [...wrap.children].forEach(b=>b.disabled=true);
+      api.hint(hints[v] || fallback);
+      setTimeout(draw, 750);
+    }
+  }
+  draw();
+  return wrap;
+}
+
+/* ---------- 5 tasks ---------- */
+const TASKS = [
+  // 1. Kazan — perimeter, choice
+  api => {
+    const wall = Array.from({length:14},(_,k)=>`<rect x="${52+k*20}" y="30" width="10" height="10" fill="#fff" stroke="#16324A" stroke-width="2"/>`).join('');
+    const fig = h('div',{class:'figure',html:`<svg viewBox="0 0 400 170" role="img" aria-label="Прямоугольный двор 40 на 10 метров">
+      ${wall}
+      <rect x="50" y="40" width="280" height="70" fill="#F4EBD3" stroke="#16324A" stroke-width="4"/>
+      <text x="190" y="140" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="800" font-size="20" fill="#16324A">40 м</text>
+      <text x="342" y="81" font-family="Nunito, sans-serif" font-weight="800" font-size="20" fill="#16324A">10 м</text>
+      <path d="M60 125 H320" stroke="#4E6A7F" stroke-width="2" marker-end="url(#a)" marker-start="url(#a)"/>
+      <defs><marker id="a" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10z" fill="#4E6A7F"/></marker></defs>
+    </svg>`});
+    return { title:'Двор Казанского кремля', nodes:[
+      h('p',null,'Двор у кремлёвской стены — прямоугольник длиной 40 м и шириной 10 м. Какой длины стена, если обойти весь двор по краю? Найди периметр.'),
+      fig,
+      choiceGroup(api,[50,100,400],100,{
+        50:'Ты сложил длину и ширину. Но у прямоугольника 4 стороны — обойди их все: 40 + 10 + 40 + 10.',
+        400:'Ты умножил стороны — так считают площадь. Периметр — это сумма длин всех сторон.'
+      },'', ()=>api.solved('P = (40 + 10) × 2 = 100 м. Чтобы обойти двор по краю, нужно пройти 100 метров.'), {label:v=>v+' м'})
+    ]};
+  },
+  // 2. Donetsk — build flowerbed from tiles, then count
+  api => {
+    const flower = `<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#F0AE2C" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v6M12 16v6M2 12h6M16 12h6M5 5l4 4M15 15l4 4M19 5l-4 4M9 15l-4 4"/></g></svg>`;
+    let placed = 0;
+    const q = h('div',{style:'display:flex;flex-direction:column;gap:12px'});
+    const grid = h('div',{style:'display:flex;flex-direction:column;gap:4px'});
+    for (let r=0;r<3;r++){
+      const row = h('div',{class:'gridrow'}, h('span',{class:'rowlbl'},'ряд '+(r+1)));
+      const cells = h('div',{class:'grid',style:'grid-template-columns:repeat(5,auto)'});
+      for (let c=0;c<5;c++){
+        cells.append(h('button',{class:'cell',type:'button','aria-label':'Положить плитку',onclick:e=>{
+          const b=e.currentTarget; if (b.classList.contains('tile')) return;
+          b.classList.add('tile'); b.innerHTML = flower; b.setAttribute('aria-label','Плитка лежит'); placed++;
+          if (placed===15) showQ();
+        }}));
+      }
+      row.append(cells); grid.append(row);
+    }
+    function showQ(){
+      q.replaceChildren(h('p',null,h('b',null,'Клумба готова! '),'Сколько плиток понадобилось?'),
+        choiceGroup(api,[8,15,16],15,{
+          8:'Ты сложил 5 и 3. А плитки лежат рядами: в каждом ряду 5 плиток, и таких рядов 3.',
+          16:'16 — это периметр клумбы. А нам нужно число плиток внутри: 5 плиток в ряду × 3 ряда.'
+        },'', ()=>api.solved('5 × 3 = 15 плиток. Чтобы узнать, сколько квадратов в прямоугольнике, умножают число плиток в ряду на число рядов.')));
+    }
+    return { title:'Клумба в парке кованых фигур', nodes:[
+      h('p',null,'Выложи прямоугольную клумбу из квадратных плиток: 5 плиток в длину и 3 в ширину. Нажимай на клетки, чтобы положить плитку.'),
+      grid, q ]};
+  },
+  // 3. Tula — match gingerbread shape with its perimeter
+  api => {
+    const T = 'font-family="Nunito, sans-serif" font-weight="800" font-size="14" fill="#16324A"';
+    const ging = 'fill="#B06C36" stroke="#5A3214" stroke-width="3"';
+    const icing = 'fill="none" stroke="#FFF4DA" stroke-width="2" stroke-dasharray="5 4"';
+    const shapes = [
+      { id:'sq', name:'Квадрат', value:16, hint:'У квадрата 4 равные стороны: 4 + 4 + 4 + 4.',
+        svg:`<svg viewBox="-12 0 180 130"><rect x="35" y="15" width="80" height="80" rx="6" ${ging}/><rect x="45" y="25" width="60" height="60" rx="4" ${icing}/><text x="75" y="118" text-anchor="middle" ${T}>4 см</text><text x="122" y="60" ${T}>4 см</text></svg>` },
+      { id:'re', name:'Прямоугольник', value:14, hint:'У прямоугольника две стороны по 5 см и две по 2 см: 5 + 2 + 5 + 2.',
+        svg:`<svg viewBox="-12 0 180 130"><rect x="15" y="35" width="110" height="44" rx="6" ${ging}/><rect x="25" y="44" width="90" height="26" rx="4" ${icing}/><text x="70" y="102" text-anchor="middle" ${T}>5 см</text><text x="130" y="62" ${T}>2 см</text></svg>` },
+      { id:'tr', name:'Треугольник', value:10, hint:'Сложи три стороны треугольника: 3 + 3 + 4.',
+        svg:`<svg viewBox="-12 0 180 130"><path d="M20 95 L130 95 L75 25 Z" stroke-linejoin="round" ${ging}/><path d="M42 86 L108 86 L75 44 Z" ${icing}/><text x="75" y="118" text-anchor="middle" ${T}>4 см</text><text x="44" y="58" text-anchor="end" ${T}>3 см</text><text x="106" y="58" ${T}>3 см</text></svg>` }
+    ];
+    const pairs = {}; let sel = null;
+    const board = h('div',{class:'match'});
+    const chipsBox = h('div',{class:'chips'});
+    const check = h('button',{class:'btn',type:'button',disabled:true,onclick:verify},'Проверить');
+    function draw(wrong=[]){
+      board.replaceChildren(...shapes.map(s=>h('button',{type:'button',class:'shape'+(sel===s.id?' sel':'')+(wrong.includes(s.id)?' wrong':''),
+          'aria-pressed':sel===s.id, onclick:()=>{ sel = s.id; api.clear(); draw(); }},
+        h('span',{html:s.svg,style:'width:100%;display:flex;justify-content:center'}),
+        h('span',null,s.name),
+        h('span',{class:'slot'+(pairs[s.id]?' filled':'')}, pairs[s.id] ? pairs[s.id]+' см' : '?'))));
+      const used = Object.values(pairs);
+      chipsBox.replaceChildren(...[10,14,16].map(v=>h('button',{type:'button',class:'chip'+(used.includes(v)?' used':''),onclick:()=>{
+        if (!sel){ api.hint('Сначала нажми на пряник, а потом — на число.'); return; }
+        for (const k in pairs) if (pairs[k]===v) delete pairs[k];
+        pairs[sel]=v; sel=null; draw();
+      }}, v+' см')));
+      check.disabled = Object.keys(pairs).length !== 3;
+    }
+    function verify(){
+      const wrong = shapes.filter(s=>pairs[s.id]!==s.value);
+      if (!wrong.length){
+        board.querySelectorAll('.shape').forEach(b=>{b.classList.add('right');b.disabled=true;});
+        chipsBox.querySelectorAll('button').forEach(b=>b.disabled=true); check.hidden=true;
+        api.solved('Треугольник — 10 см, прямоугольник — 14 см, квадрат — 16 см. Периметр любой фигуры — это сумма длин всех её сторон.');
+        return;
+      }
+      api.hint(wrong[0].hint);
+      wrong.forEach(s=>delete pairs[s.id]);
+      draw(wrong.map(s=>s.id));
+    }
+    draw();
+    return { title:'Тульские пряники', nodes:[
+      h('p',null,'Пекарь испёк пряники трёх форм. Соедини каждый пряник с его периметром: нажми на пряник, а потом на число.'),
+      board, chipsBox, h('div',{class:'row'},check) ]};
+  },
+  // 4. Moscow — choose the grid of 10×10 m squares, then area
+  api => {
+    const field = (cols, rows) => {
+      const X=30,Y=20,W=250,H=100; let lines='';
+      for (let c=1;c<cols;c++) lines += `<line x1="${X+W*c/cols}" y1="${Y}" x2="${X+W*c/cols}" y2="${Y+H}" stroke="#3E8FC4" stroke-width="2"/>`;
+      for (let r=1;r<rows;r++) lines += `<line x1="${X}" y1="${Y+H*r/rows}" x2="${X+W}" y2="${Y+H*r/rows}" stroke="#3E8FC4" stroke-width="2"/>`;
+      return `<svg viewBox="0 0 350 150" aria-hidden="true"><rect x="${X}" y="${Y}" width="${W}" height="${H}" fill="#F2D9D2" stroke="#9E3618" stroke-width="3"/>${lines}
+        <text x="${X+W/2}" y="142" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="800" font-size="20" fill="#16324A">50 м</text>
+        <text x="${X+W+6}" y="${Y+H/2+5}" font-family="Nunito, sans-serif" font-weight="800" font-size="20" fill="#16324A">20 м</text></svg>`;
+    };
+    const G = { A:[5,2], B:[10,4], C:[5,4] };
+    const step2 = h('div',{style:'display:flex;flex-direction:column;gap:12px'});
+    const grids = choiceGroup(api, ['A','B','C'], 'A', {
+      B:'Посчитай клетки вдоль длинной стороны: их 10. Значит, сторона клетки 50 : 10 = 5 м, а нужна 10 м.',
+      C:'Эти клетки не квадратные: в длину они 10 м, а в ширину только 5 м. У квадрата все стороны равны.'
+    }, '', () => {
+      api.clear();
+      step2.replaceChildren(
+        h('p',null,h('b',null,'Сетка найдена: 10 квадратов. '),'Площадь одного квадрата: 10 м × 10 м = 100 м². Какая площадь у всей площадки?'),
+        choiceGroup(api,['1 000','140','10 000'],'1 000',{
+          '140':'Площади не складывают со сторонами. Площадка — это 10 квадратов по 100 м²: 100 × 10.',
+          '10 000':'Проверь нули: 100 × 10 = 1 000.'
+        },'', ()=>api.solved('10 × 100 м² = 1 000 м². Квадратный метр — это квадрат со стороной 1 м. А вся Красная площадь гораздо больше: около 23 000 м².'),
+        {label:v=>v+' м²'}));
+    }, {pic:true, label:v=>field(...G[v])+`<span>Сетка ${({A:'А',B:'Б',C:'В'})[v]}</span>`});
+    return { title:'Площадка на Красной площади', nodes:[
+      h('p',null,'На Красной площади огородили площадку 50 м на 20 м. Выбери сетку, в которой площадка разбита на квадраты со стороной 10 м.'),
+      grids, step2 ]};
+  },
+  // 5. Baikal — complete the 4×3 rectangle, then area and perimeter
+  api => {
+    const given = new Set([0,1,2,3,4,5]);
+    let filled = 6;
+    const q = h('div',{style:'display:flex;flex-direction:column;gap:12px'});
+    const grid = h('div',{class:'grid',style:'grid-template-columns:repeat(4,auto)'});
+    for (let k=0;k<12;k++){
+      if (given.has(k)) grid.append(h('div',{class:'cell given'}));
+      else grid.append(h('button',{class:'cell',type:'button','aria-label':'Добавить клетку',onclick:e=>{
+        const b=e.currentTarget; if (b.classList.contains('water')) return;
+        b.classList.add('water'); b.setAttribute('aria-label','Клетка добавлена'); filled++;
+        if (filled===12) askArea();
+      }}));
+    }
+    function askArea(){
+      q.replaceChildren(h('p',null,h('b',null,'Получился прямоугольник 4 × 3! '),'Найди его площадь.'),
+        choiceGroup(api,[6,12,14],12,{
+          6:'Это только клетки, которые были на берегу сначала. Посчитай все клетки: 4 в ряду × 3 ряда.',
+          14:'14 — это периметр. Площадь — сколько клеток внутри: 4 × 3.'
+        },'', askPer, {label:v=>v+' кв. ед.'}));
+    }
+    function askPer(){
+      api.clear();
+      q.append(h('p',null,h('b',null,'Площадь — 12 кв. ед. '),'А теперь найди периметр.'),
+        choiceGroup(api,[7,12,14],14,{
+          7:'Ты сложил длину и ширину один раз. Обойди прямоугольник по краю: 4 + 3 + 4 + 3.',
+          12:'12 — это площадь. Периметр — длина края: 4 + 3 + 4 + 3.'
+        },'', ()=>api.solved('Площадь — 12 кв. ед., периметр — (4 + 3) × 2 = 14 ед. Площадь считает клетки внутри, а периметр — длину края.'),
+        {label:v=>v+' ед.'}));
+    }
+    return { title:'Берег Байкала', nodes:[
+      h('p',null,'На сетке нарисован кусочек берега из 6 клеток. Добавь ещё 6 клеток-воды, чтобы получился прямоугольник 4 × 3. Нажимай на пустые клетки.'),
+      h('div',{style:'display:flex;justify-content:center'},grid), q ]};
+  }
+];
+
+function screenReward(){
+  const last = state.pieces === 5;
+  return [
+    routeStrip(),
+    ticket('Награда','Кусочек карты №'+state.pieces+' твой!', `Собрано<br><b>${state.pieces} из 5</b>`,
+      h('div',{class:'mapbox',html:mapSVG(state.pieces)}),
+      h('p',{class:'pieces'}, last ? 'Все пять кусочков на месте.' : 'Осталось собрать: '+(5-state.pieces)),
+      h('div',{class:'row'}, h('button',{class:'btn',onclick:()=>{
+        if (last) go('final'); else { state.stop++; go('travel'); }
+      }}, last ? 'Сложить карту' : 'Ехать дальше: '+STOPS[state.pieces].city)))
+  ];
+}
+
+function screenFinal(){
+  const p = state.player;
+  const full = [p.last,p.first].filter(Boolean).join(' ');
+  const where = [p.school, p.city, p.region].filter(Boolean).join(', ');
+  return [
+    routeStrip(),
+    ticket('Конечная станция','Карта собрана!', 'Маршрут<br><b>пройден</b>',
+      h('div',{class:'mapbox',html:mapSVG(5)}),
+      h('div',{class:'cert'},
+        h('div',{class:'eyebrow'},'Грамота путешественника'),
+        h('div',{class:'stars','aria-hidden':'true'},'★★★★★'),
+        h('div',{class:'name'}, full),
+        h('p',null, p.cls+' класс' + (where ? ' · '+where : '')),
+        h('p',null,'Вместе с Алисой и Егором проехал(а) по маршруту Казань — Донецк — Тула — Москва — Байкал, решил(а) 5 задач на периметр и площадь и собрал(а) карту путешествия.'),
+        h('p',{class:'note'}, state.hints ? 'Подсказок понадобилось: '+state.hints : 'Все задачи решены с первой попытки!')),
+      h('div',{class:'row'},
+        h('button',{class:'btn',onclick:()=>{ state.stop=0; state.pieces=0; state.hints=0; go('travel'); }},'Пройти ещё раз'),
+        h('button',{class:'btn ghost',onclick:()=>{ state.player=null; go('start'); }},'Новый пассажир')))
+  ];
+}
+
+/* ---------- render ---------- */
+const SCREENS = { start:screenStart, wagons:screenWagons, travel:screenTravel, task:screenTask, reward:screenReward, final:screenFinal };
+function render(){
+  if (!state.player && state.screen!=='start') state.screen='start';
+  app.replaceChildren(...SCREENS[state.screen]());
+}
+function start(data){ if (data && data.screen) Object.assign(state, data); render(); }
+window.claude?.hot?.snapshot?.(()=>({...state}));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+})();
+</script>
+
+</body>
+</html>
